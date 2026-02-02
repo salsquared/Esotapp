@@ -5,6 +5,8 @@ import { LANGUAGES } from '../utils/languages';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
 import CustomModal from '../components/CustomModal';
+import { fetchWordDefinition } from '../utils/dictionarySource';
+import { getPosStyle } from '../utils/posStyles';
 
 export default function AddWord({ navigation }) {
     const [word, setWord] = useState('');
@@ -50,40 +52,15 @@ export default function AddWord({ navigation }) {
             setLookupError(null);
             setAvailableDefinitions([]);
             try {
-                const response = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${trimmedWord}`, { signal });
-                const data = await response.json();
+                const result = await fetchWordDefinition(trimmedWord, signal);
 
-                if (Array.isArray(data) && data.length > 0) {
-                    const definitions = [];
-                    data.forEach(entry => {
-                        if (entry.meanings) {
-                            entry.meanings.forEach(meaning => {
-                                meaning.definitions.forEach(def => {
-                                    definitions.push({
-                                        definition: def.definition,
-                                        partOfSpeech: meaning.partOfSpeech,
-                                        example: def.example
-                                    });
-                                });
-                            });
-                        }
-                    });
+                if (result && result.data && result.data.length > 0) {
+                    setAvailableDefinitions(result.data);
 
-                    if (definitions.length > 0) {
-                        setAvailableDefinitions(definitions);
-                        // If only one, set it automatically, otherwise show modal
-                        // But user requested to CHOOSE, so maybe always show list if available?
-                        // Let's just update the list and maybe Auto-fill the first one but allow changing?
-                        // Or better: clear current definition and show choices?
-                        // User said: "I should not get [x]... that isnt helpful"
-                        // So let's auto-select the first one BUT allow opening the list.
-                        // Or better yet, when they stop typing, maybe a "Select Definition" button appears?
-
-                        // Current behavior was auto-set. Let's keep auto-set of first one but store all for selection.
-                        setDefinition(definitions[0].definition);
-                        setPartOfSpeech(definitions[0].partOfSpeech);
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    }
+                    // Auto-select the first definition
+                    setDefinition(result.data[0].definition);
+                    setPartOfSpeech(result.data[0].partOfSpeech);
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                 } else {
                     setLookupError("Word not found");
                 }
@@ -92,8 +69,13 @@ export default function AddWord({ navigation }) {
                     console.log("Fetch aborted");
                     return;
                 }
-                console.log("Error fetching definition:", error);
-                setLookupError("Network error");
+
+                if (error.message === 'Word not found in any source') {
+                    setLookupError("Word not found");
+                } else {
+                    console.log("Error fetching definition:", error);
+                    setLookupError("Network error");
+                }
             } finally {
                 if (!signal.aborted) {
                     setIsLoading(false);
@@ -311,9 +293,11 @@ export default function AddWord({ navigation }) {
                                     }}
                                 >
                                     <View className="flex-row items-center mb-1">
-                                        <Text className="text-blue-300 font-bold text-xs uppercase bg-blue-900/30 px-2 py-0.5 rounded mr-2">
-                                            {item.partOfSpeech}
-                                        </Text>
+                                        <View className={`px-2 py-0.5 rounded mr-2 border ${getPosStyle(item.partOfSpeech)}`}>
+                                            <Text className={`font-bold text-xs uppercase ${getPosStyle(item.partOfSpeech).split(' ')[1]}`}>
+                                                {item.partOfSpeech}
+                                            </Text>
+                                        </View>
                                     </View>
                                     <Text className="text-white text-base leading-5 mb-1">{item.definition}</Text>
                                     {item.example && (

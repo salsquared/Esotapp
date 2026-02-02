@@ -13,6 +13,38 @@ Esotapp is a premium, offline-first vocabulary learning application designed to 
 - **🌍 Multi-Language Support**: Built-in support for diverse languages with flag indicators.
   > **Note**: Full multilingual support is currently in development. The application is fully functional for English vocabulary.
 
+## Data Sources
+
+The application currently relies on the following service for definitions and metadata:
+
+- **Primary Source**: [Free Dictionary API](https://dictionaryapi.dev/)
+  - Used for fetching definitions, part-of-speech tags, and phonetics for English words.
+- **Limitations**:
+  - The current API may have incomplete coverage for certain words (e.g., "Hell", "Damn", or obscure slang terms).
+  - Dialectical variations and archaic terms might be missing.
+
+### Future Integrations
+
+To address these limitations and provide a more robust dictionary, the following sources are being evaluated for integration:
+
+1.  **Merriam-Webster's Collegiate Dictionary API**
+    -   **Type**: Trustworthy / Academic.
+    -   **Details**: Excellent for standard English, including culturally significant terms and standard expletives that might be filtered by simpler APIs.
+    -   **License**: Free for non-commercial use (up to 1,000 queries/day).
+    -   **Role**: Will serve as a fallback for words not found in the primary API.
+
+2.  **Urban Dictionary (Unofficial API)**
+    -   **Type**: Slang / Colloquial.
+    -   **Details**: The gold standard for modern slang, internet culture, and uncensored vernacular.
+    -   **Role**: Will be used specifically when a user toggles "Include Slang" or when standard dictionaries fail to yield results.
+
+3.  **Wiktionary**
+    -   **Type**: Open Source / Community.
+    -   **Details**: specific and technical coverage without commercial restrictions.
+
+
+
+
 ## Part of Speech Color Legend
 
 | Type | Color |
@@ -26,6 +58,10 @@ Esotapp is a premium, offline-first vocabulary learning application designed to 
 | **Conjunction** | 🟣 Indigo |
 | **Interjection/Exclamation** | 🟡 Yellow |
 | **Determiner/Article** | ⚫ Gray |
+| **Names (Bio/Geo)** | 🪻 Purple |
+| **Idioms/Phrases** | 🍋 Lime |
+| **Affixes (Prefix/Suffix)** | ☁️ Sky |
+| **Abbreviation/Symbol** | 🗿 Slate |
 | **Other** | 🔴 Rose |
 
 ## Tech Stack
@@ -77,6 +113,11 @@ Esotapp is a premium, offline-first vocabulary learning application designed to 
 - `utils/`: Helper functions and configuration.
   - `config.js`: Application configuration (Dev/User mode).
   - `languages.js`: Language definitions and flags.
+  - `posStyles.js`: Logic for Part-of-Speech color coding.
+  - `dictionarySource.js`: Dictionary API integration logic.
+- `scripts/`: Maintenance and testing scripts.
+  - `collect_pos_types.js`: Scans dictionaries to validate POS coverage.
+  - `test_dictionary_implementation.js`: Tests API connectivity.
 - `assets/`: Images and static resources.
 
 ## Configuration & Modes
