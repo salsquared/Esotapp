@@ -11,6 +11,22 @@ Esotapp is a premium, offline-first vocabulary learning application designed to 
 - **💾 Persistence**: Data is saved locally using Async Storage, ensuring your words are always with you.
 - **📳 Haptic Feedback**: Tactile responses for interactions using Expo Haptics.
 - **🌍 Multi-Language Support**: Built-in support for diverse languages with flag indicators.
+  > **Note**: Full multilingual support is currently in development. The application is fully functional for English vocabulary.
+
+## Part of Speech Color Legend
+
+| Type | Color |
+| :--- | :--- |
+| **Noun** | 🔵 Blue |
+| **Verb** | 🟢 Green |
+| **Adjective** | 🟠 Orange |
+| **Adverb** | 🔵 Cyan |
+| **Pronoun** | 🩷 Pink |
+| **Preposition** | 🧼 Teal |
+| **Conjunction** | 🟣 Indigo |
+| **Interjection/Exclamation** | 🟡 Yellow |
+| **Determiner/Article** | ⚫ Gray |
+| **Other** | 🔴 Rose |
 
 ## Tech Stack
 
