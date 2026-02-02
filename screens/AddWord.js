@@ -8,10 +8,15 @@ import * as Haptics from 'expo-haptics';
 export default function AddWord({ navigation }) {
     const [word, setWord] = useState('');
     const [definition, setDefinition] = useState('');
+    const [partOfSpeech, setPartOfSpeech] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [selectedLanguage, setSelectedLanguage] = useState('EN');
     const [showLangModal, setShowLangModal] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
+
+    // New state for definition selection
+    const [availableDefinitions, setAvailableDefinitions] = useState([]);
+    const [showDefinitionModal, setShowDefinitionModal] = useState(false);
 
     const filteredLanguages = useMemo(() => {
         return LANGUAGES.filter(lang =>
@@ -32,9 +37,34 @@ export default function AddWord({ navigation }) {
                 const data = await response.json();
 
                 if (Array.isArray(data) && data.length > 0) {
-                    const firstDef = data[0].meanings[0]?.definitions[0]?.definition;
-                    if (firstDef) {
-                        setDefinition(firstDef);
+                    const definitions = [];
+                    data.forEach(entry => {
+                        if (entry.meanings) {
+                            entry.meanings.forEach(meaning => {
+                                meaning.definitions.forEach(def => {
+                                    definitions.push({
+                                        definition: def.definition,
+                                        partOfSpeech: meaning.partOfSpeech,
+                                        example: def.example
+                                    });
+                                });
+                            });
+                        }
+                    });
+
+                    if (definitions.length > 0) {
+                        setAvailableDefinitions(definitions);
+                        // If only one, set it automatically, otherwise show modal
+                        // But user requested to CHOOSE, so maybe always show list if available?
+                        // Let's just update the list and maybe Auto-fill the first one but allow changing?
+                        // Or better: clear current definition and show choices?
+                        // User said: "I should not get [x]... that isnt helpful"
+                        // So let's auto-select the first one BUT allow opening the list.
+                        // Or better yet, when they stop typing, maybe a "Select Definition" button appears?
+
+                        // Current behavior was auto-set. Let's keep auto-set of first one but store all for selection.
+                        setDefinition(definitions[0].definition);
+                        setPartOfSpeech(definitions[0].partOfSpeech);
                         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                     }
                 }
@@ -60,10 +90,14 @@ export default function AddWord({ navigation }) {
         }
 
         try {
+            // Auto-format word: First letter capital, rest lowercase
+            const formattedWord = word.trim().charAt(0).toUpperCase() + word.trim().slice(1).toLowerCase();
+
             const newEntry = {
                 id: Date.now().toString(),
-                word: word.trim(),
+                word: formattedWord,
                 definition: definition.trim(),
+                partOfSpeech: partOfSpeech,
 
                 language: selectedLanguage,
                 dateAdded: new Date().toISOString(),
@@ -82,6 +116,7 @@ export default function AddWord({ navigation }) {
 
             setWord('');
             setDefinition('');
+            setPartOfSpeech('');
 
         } catch (e) {
             Alert.alert('Error', 'Failed to save word.');
@@ -119,6 +154,11 @@ export default function AddWord({ navigation }) {
 
             <View className="flex-row justify-between mb-2">
                 <Text className="text-white text-lg font-bold">Definition</Text>
+                {availableDefinitions.length > 1 && (
+                    <TouchableOpacity onPress={() => setShowDefinitionModal(true)}>
+                        <Text className="text-blue-400 text-sm font-bold">Show all {availableDefinitions.length} definitions</Text>
+                    </TouchableOpacity>
+                )}
                 {isLoading && <Text className="text-blue-400 text-sm italic">Searching...</Text>}
             </View>
 
@@ -197,6 +237,51 @@ export default function AddWord({ navigation }) {
                                     </View>
                                     {selectedLanguage === item.value && (
                                         <Text className="text-blue-500 font-bold">✓</Text>
+                                    )}
+                                </TouchableOpacity>
+                            )}
+                        />
+                    </View>
+                </View>
+            </Modal>
+            {/* Definition Selection Modal - Select Meaning */}
+            <Modal
+                visible={showDefinitionModal}
+                transparent={true}
+                animationType="slide"
+                onRequestClose={() => setShowDefinitionModal(false)}
+            >
+                <View className="flex-1 justify-end bg-black/50">
+                    <View className="bg-gray-900 rounded-t-3xl p-6 h-3/4">
+                        <View className="flex-row justify-between items-center mb-4">
+                            <Text className="text-white text-xl font-bold">Select Definition</Text>
+                            <TouchableOpacity onPress={() => setShowDefinitionModal(false)}>
+                                <Text className="text-blue-400 text-lg">Close</Text>
+                            </TouchableOpacity>
+                        </View>
+
+                        <Text className="text-gray-400 mb-4 italic">Select the best definition for "{word}"</Text>
+
+                        <FlatList
+                            data={availableDefinitions}
+                            keyExtractor={(item, index) => index.toString()}
+                            renderItem={({ item }) => (
+                                <TouchableOpacity
+                                    className={`p-4 mb-3 rounded-xl bg-gray-800 border ${definition === item.definition ? 'border-blue-500' : 'border-gray-700'}`}
+                                    onPress={() => {
+                                        setDefinition(item.definition);
+                                        setPartOfSpeech(item.partOfSpeech);
+                                        setShowDefinitionModal(false);
+                                    }}
+                                >
+                                    <View className="flex-row items-center mb-1">
+                                        <Text className="text-blue-300 font-bold text-xs uppercase bg-blue-900/30 px-2 py-0.5 rounded mr-2">
+                                            {item.partOfSpeech}
+                                        </Text>
+                                    </View>
+                                    <Text className="text-white text-base leading-5 mb-1">{item.definition}</Text>
+                                    {item.example && (
+                                        <Text className="text-gray-500 text-sm italic">"{item.example}"</Text>
                                     )}
                                 </TouchableOpacity>
                             )}
