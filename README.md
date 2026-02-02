@@ -73,8 +73,27 @@ Esotapp is a premium, offline-first vocabulary learning application designed to 
   - `AddWord.js`: Interface for inputting new vocabulary.
   - `List.js`: Display of all saved words.
   - `Quiz.js`: Game logic for testing vocabulary.
-- `utils/`: Helper functions (e.g., language utilities).
+- `components/`: Reusable UI components (e.g., `CustomModal.js`).
+- `utils/`: Helper functions and configuration.
+  - `config.js`: Application configuration (Dev/User mode).
+  - `languages.js`: Language definitions and flags.
 - `assets/`: Images and static resources.
+
+## Configuration & Modes
+
+The application features a configurable mode system managed via `utils/config.js`.
+
+### Dev Mode vs. User Mode
+
+You can toggle between Development and User modes by changing the `IS_DEV` constant in `utils/config.js`:
+
+```javascript
+export const IS_DEV = true; // Set to 'false' for production/user mode
+```
+
+- **User Mode (`IS_DEV = false`)**: The standard experience for end-users. Clean interface focused on learning.
+- **Dev Mode (`IS_DEV = true`)**: Enables additional maintenance tools. Currently, this includes:
+  - **Refresh Metadata**: A button in the `List` view that triggers a data migration script. This script formats existing words (Title Case) and attempts to fetch missing Part of Speech (POS) tags from the dictionary API for any words that lack them.
 
 ## License
 
