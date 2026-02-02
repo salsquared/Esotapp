@@ -4,6 +4,7 @@ import { LANGUAGES } from '../utils/languages';
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
+import CustomModal from '../components/CustomModal';
 
 export default function AddWord({ navigation }) {
     const [word, setWord] = useState('');
@@ -17,6 +18,7 @@ export default function AddWord({ navigation }) {
     // New state for definition selection
     const [availableDefinitions, setAvailableDefinitions] = useState([]);
     const [showDefinitionModal, setShowDefinitionModal] = useState(false);
+    const [showSuccessModal, setShowSuccessModal] = useState(false);
 
     const filteredLanguages = useMemo(() => {
         return LANGUAGES.filter(lang =>
@@ -110,25 +112,7 @@ export default function AddWord({ navigation }) {
             await AsyncStorage.setItem('vocabList', JSON.stringify(updatedWords));
 
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-            Alert.alert('Success', 'Word added to your list!', [
-                {
-                    text: 'Main Menu',
-                    onPress: () => {
-                        setWord('');
-                        setDefinition('');
-                        setPartOfSpeech('');
-                        navigation.goBack();
-                    }
-                },
-                {
-                    text: 'New Word',
-                    onPress: () => {
-                        setWord('');
-                        setDefinition('');
-                        setPartOfSpeech('');
-                    }
-                }
-            ]);
+            setShowSuccessModal(true);
 
         } catch (e) {
             Alert.alert('Error', 'Failed to save word.');
@@ -301,6 +285,37 @@ export default function AddWord({ navigation }) {
                     </View>
                 </View>
             </Modal>
+
+            <CustomModal
+                visible={showSuccessModal}
+                title="Success"
+                icon="check-circle"
+                message="Word added to your list!"
+                onClose={() => { }}
+                buttons={[
+                    {
+                        text: 'Main Menu',
+                        type: 'secondary',
+                        onPress: () => {
+                            setWord('');
+                            setDefinition('');
+                            setPartOfSpeech('');
+                            setShowSuccessModal(false);
+                            navigation.goBack();
+                        }
+                    },
+                    {
+                        text: 'New Word',
+                        type: 'primary',
+                        onPress: () => {
+                            setWord('');
+                            setDefinition('');
+                            setPartOfSpeech('');
+                            setShowSuccessModal(false);
+                        }
+                    }
+                ]}
+            />
         </>
     );
 }
