@@ -14,6 +14,30 @@ export const getPosStyle = (pos) => {
     const is = (type) => p === type;
     const starts = (prefix) => p.startsWith(prefix + ' ');
 
+    // --- PRIORITIZED SPECIFIC TYPES ---
+
+    // Abbreviations & Symbols
+    if (p.includes('abbreviation') || p.includes('symbol')) {
+        return 'bg-slate-700 text-slate-300 border-slate-500';
+    }
+
+    // Names (Biographical, Geographical)
+    if (p.includes('biographical') || p.includes('geographical') || p.includes('name')) {
+        return 'bg-purple-600/20 text-purple-200 border-purple-500/30';
+    }
+
+    // Idioms & Phrases
+    if (p.includes('idiom') || p.includes('phrase')) {
+        return 'bg-lime-500/20 text-lime-200 border-lime-500/30';
+    }
+
+    // Prefixes, Suffixes, Combining forms
+    if (p.includes('prefix') || p.includes('suffix') || p.includes('combining')) {
+        return 'bg-sky-900/40 text-sky-300 border-sky-500/30';
+    }
+
+    // --- STANDARD PARTS OF SPEECH ---
+
     // Adverb (Check before verb to avoid overlap)
     if (is('adverb') || is('adv') || starts('adverb')) {
         return 'bg-cyan-900/40 text-cyan-300 border-cyan-500/30';
@@ -61,26 +85,6 @@ export const getPosStyle = (pos) => {
         return 'bg-gray-700 text-gray-300 border-gray-500';
     }
 
-    // Abbreviations & Symbols
-    if (p.includes('abbreviation') || p.includes('symbol')) {
-        return 'bg-slate-700 text-slate-300 border-slate-500';
-    }
-
-    // Names (Biographical, Geographical)
-    if (p.includes('biographical') || p.includes('geographical') || p.includes('name')) {
-        return 'bg-purple-900/40 text-purple-300 border-purple-500/30';
-    }
-
-    // Idioms & Phrases
-    if (p.includes('idiom') || p.includes('phrase')) {
-        return 'bg-lime-900/40 text-lime-300 border-lime-500/30';
-    }
-
-    // Prefixes, Suffixes, Combining forms
-    if (p.includes('prefix') || p.includes('suffix') || p.includes('combining')) {
-        return 'bg-sky-900/40 text-sky-300 border-sky-500/30';
-    }
-
-    // Fallback for everything else (e.g. "biographical name", "abbreviation")
+    // Fallback for everything else
     return 'bg-rose-900/40 text-rose-300 border-rose-500/30';
 };

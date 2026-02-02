@@ -34,8 +34,11 @@ const cleanMWString = (str) => {
         .replace(/{\/it}/g, '')
         .replace(/{wi}/g, '')
         .replace(/{\/wi}/g, '')
+        .replace(/{sup}/g, '')
         .replace(/{\/sup}/g, '')
-        .replace(/(\s+)/g, ' ')
+        .replace(/\u2026/g, '...') // Normalize unicode ellipsis
+        .replace(/(\s+)/g, ' ') // Collapse spaces
+        .replace(/\.\.\. /g, '...') // Remove space after ellipsis
         .trim();
 };
 

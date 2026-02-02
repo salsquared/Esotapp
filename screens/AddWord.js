@@ -5,6 +5,8 @@ import { LANGUAGES } from '../utils/languages';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
 import CustomModal from '../components/CustomModal';
+import SuccessModal from '../components/SuccessModal';
+import ErrorModal from '../components/ErrorModal';
 import { fetchWordDefinition } from '../utils/dictionarySource';
 import { getPosStyle } from '../utils/posStyles';
 
@@ -310,10 +312,8 @@ export default function AddWord({ navigation }) {
                 </View>
             </Modal>
 
-            <CustomModal
+            <SuccessModal
                 visible={showSuccessModal}
-                title="Success"
-                icon="check-circle"
                 message="Word added to your list!"
                 onClose={() => { }}
                 buttons={[
@@ -341,13 +341,12 @@ export default function AddWord({ navigation }) {
                 ]}
             />
 
-            <CustomModal
+            <ErrorModal
                 visible={showDuplicateModal}
                 title="Duplicate Entry"
-                icon="alert-triangle"
-                iconColor="#f59e0b"
                 message="This word and definition are already in your list. Please select a different definition or go back."
                 onClose={() => setShowDuplicateModal(false)}
+                iconColor="#f59e0b"
                 buttons={[
                     {
                         text: 'Return',
