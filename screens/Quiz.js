@@ -1,33 +1,38 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { View, Text, TouchableOpacity, TextInput, Alert, ScrollView } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useFocusEffect } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
+import { Feather } from '@expo/vector-icons';
+import { getWords, updateWordStats } from '../utils/storage';
 
-export default function Quiz({ navigation }) {
+export default function Quiz() {
+    const navigation = useNavigation();
     const [words, setWords] = useState([]);
-    const [gameState, setGameState] = useState('menu'); // menu, playing, feedback, finished
-    const [mode, setMode] = useState(null); // 'written', 'mc_def', 'mc_word'
+    const [appState, setAppState] = useState('menu'); // menu, playing, feedback, finished
+    const [gameMode, setGameMode] = useState(null); // 'written', 'mc_def', 'mc_word'
     const [currentQuestion, setCurrentQuestion] = useState(null);
     const [score, setScore] = useState(0);
     const [textInput, setTextInput] = useState('');
     const [selectedAnswer, setSelectedAnswer] = useState(null);
     const [feedback, setFeedback] = useState(null); // { correct: bool, message: string }
+    const [quizQueue, setQuizQueue] = useState([]);
+    const [sessionTotal, setSessionTotal] = useState(0);
 
+    // Refresh count when screen comes into focus
+    // Refresh count when screen comes into focus
     useFocusEffect(
-        React.useCallback(() => {
+        useCallback(() => {
+            console.log("Quiz screen focused, resetting state...");
             loadWords();
-            setGameState('menu');
+            setAppState('menu');
+            setGameMode(null);
             setScore(0);
         }, [])
     );
 
     const loadWords = async () => {
-        try {
-            const jsonValue = await AsyncStorage.getItem('vocabList');
-            const loadedWords = jsonValue != null ? JSON.parse(jsonValue) : [];
-            setWords(loadedWords);
-        } catch (e) { console.error(e); }
+        const loadedWords = await getWords();
+        setWords(loadedWords);
     };
 
     const startGame = (selectedMode) => {
@@ -40,33 +45,44 @@ export default function Quiz({ navigation }) {
             return;
         }
         Haptics.selectionAsync();
-        setMode(selectedMode);
+
+        // Shuffle words and initialize the queue
+        const shuffled = [...words].sort(() => Math.random() - 0.5);
+        setQuizQueue(shuffled);
+        setSessionTotal(shuffled.length);
+
+        setGameMode(selectedMode);
         setScore(0);
-        setGameState('playing');
-        generateQuestion(selectedMode);
+        setAppState('playing');
+
+        // Generate first question from the fresh shuffled list
+        generateQuestion(selectedMode, shuffled);
     };
 
-    const generateQuestion = (currentMode) => {
+    const generateQuestion = (currentMode, queue = null) => {
         setFeedback(null);
         setTextInput('');
         setSelectedAnswer(null);
 
-        const targetIndex = Math.floor(Math.random() * words.length);
-        const target = words[targetIndex];
+        // Determine which queue to use: the one passed in (for immediate first render) or the state
+        let currentQueue = queue || quizQueue;
+
+        if (currentQueue.length === 0) {
+            setAppState('finished');
+            return;
+        }
+
+        const target = currentQueue[0];
+        // Update the queue for the next turn
+        const nextQueue = currentQueue.slice(1);
+        setQuizQueue(nextQueue);
 
         let questionData = { target };
 
         if (currentMode === 'mc_def' || currentMode === 'mc_word') {
-            const distractors = [];
-            const availableIndices = words.map((_, i) => i).filter(i => i !== targetIndex);
-
-            // Select 3 distractors
-            for (let i = 0; i < 3; i++) {
-                if (availableIndices.length === 0) break;
-                const randPos = Math.floor(Math.random() * availableIndices.length);
-                const distractorIndex = availableIndices.splice(randPos, 1)[0];
-                distractors.push(words[distractorIndex]);
-            }
+            const otherWords = words.filter(w => w.id !== target.id);
+            const shuffledOthers = otherWords.sort(() => Math.random() - 0.5);
+            const distractors = shuffledOthers.slice(0, 3);
 
             // Shuffle options including target
             const options = [...distractors, target].sort(() => Math.random() - 0.5);
@@ -76,10 +92,15 @@ export default function Quiz({ navigation }) {
         setCurrentQuestion(questionData);
     };
 
+    const updateStats = async (wordId, isCorrect) => {
+        const updatedWords = await updateWordStats(wordId, isCorrect);
+        setWords(updatedWords);
+    };
+
     const checkAnswer = (answer) => {
         setSelectedAnswer(answer);
         const isCorrect =
-            mode === 'written'
+            gameMode === 'written'
                 ? answer.trim().toLowerCase() === currentQuestion.target.word.toLowerCase()
                 : answer.id === currentQuestion.target.id;
 
@@ -90,115 +111,166 @@ export default function Quiz({ navigation }) {
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
         }
 
+        // Update persistent stats for the word
+        updateStats(currentQuestion.target.id, isCorrect);
+
         setFeedback({
             correct: isCorrect,
             message: isCorrect ? 'Correct!' : `Wrong! It was "${currentQuestion.target.word}"`
         });
-        setGameState('feedback');
+        setAppState('feedback');
     };
 
     const nextQuestion = () => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-        setGameState('playing');
-        generateQuestion(mode);
+        setAppState('playing');
+        generateQuestion(gameMode); // Uses quizQueue from state
     };
 
-    if (gameState === 'menu') {
-        return (
-            <View className="flex-1 bg-gray-900 justify-center p-6">
-                <Text className="text-white text-3xl font-bold mb-8 text-center">Select Quiz Mode</Text>
+    return (
+        <View className="flex-1 bg-gray-900">
+            {appState === 'menu' && (
+                <View className="flex-1 justify-center items-center p-6">
+                    <View className="w-full max-w-md relative">
+                        <View className="absolute bottom-full left-0 right-0 mb-12">
+                            <Text className="text-white text-3xl font-bold text-center">Select Quiz Mode</Text>
+                        </View>
 
-                <TouchableOpacity className="bg-blue-600 p-5 rounded-xl mb-4" onPress={() => startGame('written')}>
-                    <Text className="text-white text-xl font-bold text-center">Written (Hard)</Text>
-                    <Text className="text-gray-200 text-center text-sm">Type the word from definition</Text>
-                </TouchableOpacity>
+                        <TouchableOpacity
+                            className="bg-emerald-600 p-5 rounded-xl mb-6 shadow-lg shadow-emerald-900/50 w-full"
+                            onPress={() => startGame('mc_def')}
+                        >
+                            <Text className="text-white text-2xl font-bold text-center">Pick the Word (Easy)</Text>
+                            <View className="flex-row items-center mt-1 w-full">
+                                <View className="flex-1 items-end pr-2">
+                                    <Text className="text-emerald-100 text-base italic" numberOfLines={1} adjustsFontSizeToFit>Meaning provided</Text>
+                                </View>
+                                <Feather name="arrow-right" size={16} color="#d1fae5" />
+                                <View className="flex-1 items-start pl-2">
+                                    <Text className="text-emerald-100 text-base italic" numberOfLines={1} adjustsFontSizeToFit>Choose Word</Text>
+                                </View>
+                            </View>
+                        </TouchableOpacity>
 
-                <TouchableOpacity className="bg-purple-600 p-5 rounded-xl mb-4" onPress={() => startGame('mc_word')}>
-                    <Text className="text-white text-xl font-bold text-center">Pick the Definition</Text>
-                    <Text className="text-gray-200 text-center text-sm">Word provided → Choose Meaning</Text>
-                </TouchableOpacity>
+                        <TouchableOpacity
+                            className="bg-yellow-500 p-5 rounded-xl mb-6 shadow-lg shadow-yellow-900/50 w-full"
+                            onPress={() => startGame('mc_word')}
+                        >
+                            <Text className="text-white text-2xl font-bold text-center">Pick the Definition (Medium)</Text>
+                            <View className="flex-row items-center mt-1 w-full">
+                                <View className="flex-1 items-end pr-2">
+                                    <Text className="text-white text-base italic" numberOfLines={1} adjustsFontSizeToFit>Word provided</Text>
+                                </View>
+                                <Feather name="arrow-right" size={16} color="white" />
+                                <View className="flex-1 items-start pl-2">
+                                    <Text className="text-white text-base italic" numberOfLines={1} adjustsFontSizeToFit>Choose Meaning</Text>
+                                </View>
+                            </View>
+                        </TouchableOpacity>
 
-                <TouchableOpacity className="bg-indigo-600 p-5 rounded-xl mb-4" onPress={() => startGame('mc_def')}>
-                    <Text className="text-white text-xl font-bold text-center">Pick the Word</Text>
-                    <Text className="text-gray-200 text-center text-sm">Meaning provided → Choose Word</Text>
-                </TouchableOpacity>
-            </View>
-        );
-    }
-
-    if (gameState === 'playing' || gameState === 'feedback') {
-        return (
-            <ScrollView contentContainerStyle={{ flexGrow: 1 }} className="bg-gray-900 p-6">
-                <View className="flex-row justify-between mb-8 mt-4">
-                    <Text className="text-gray-400">Score: {score}</Text>
-                    <TouchableOpacity onPress={() => setGameState('menu')}>
-                        <Text className="text-red-400">Exit</Text>
-                    </TouchableOpacity>
-                </View>
-
-                {/* Display Question Prompt */}
-                <View className="mb-8">
-                    <Text className="text-gray-400 text-lg mb-2 text-center">
-                        {mode === 'mc_word' ? 'What is the definition of:' : 'What word matches this definition?'}
-                    </Text>
-                    <Text className="text-white text-3xl font-bold text-center p-4 bg-gray-800 rounded-xl">
-                        {mode === 'mc_word' ? currentQuestion.target.word : currentQuestion.target.definition}
-                    </Text>
-                </View>
-
-                {/* Input Area */}
-                {mode === 'written' ? (
-                    <View>
-                        <TextInput
-                            className="bg-gray-800 text-white p-4 rounded-xl mb-6 text-xl border border-gray-700 text-center"
-                            placeholder="Type the word..."
-                            placeholderTextColor="#6b7280"
-                            value={textInput}
-                            onChangeText={setTextInput}
-                            editable={gameState === 'playing'}
-                            autoCapitalize="none"
-                        />
-                        {gameState === 'playing' && (
-                            <TouchableOpacity className="bg-blue-600 p-4 rounded-xl" onPress={() => checkAnswer(textInput)}>
-                                <Text className="text-white text-xl font-bold text-center">Submit</Text>
-                            </TouchableOpacity>
-                        )}
-                    </View>
-                ) : (
-                    <View>
-                        {currentQuestion.options.map((option, index) => (
-                            <TouchableOpacity
-                                key={index}
-                                disabled={gameState !== 'playing'}
-                                className={`p-4 rounded-xl mb-3 border ${gameState === 'feedback'
-                                        ? (option.id === currentQuestion.target.id ? 'bg-green-600 border-green-600' : (option.id === selectedAnswer?.id ? 'bg-red-600 border-red-600' : 'bg-gray-800 border-gray-700'))
-                                        : 'bg-gray-800 border-gray-700 active:bg-blue-900'
-                                    }`}
-                                onPress={() => checkAnswer(option)}
-                            >
-                                <Text className="text-white text-lg">
-                                    {mode === 'mc_word' ? option.definition : option.word}
-                                </Text>
-                            </TouchableOpacity>
-                        ))}
-                    </View>
-                )}
-
-                {/* Feedback Area */}
-                {gameState === 'feedback' && (
-                    <View className="mt-8 items-center">
-                        <Text className={`text-2xl font-bold mb-4 ${feedback.correct ? 'text-green-400' : 'text-red-400'}`}>
-                            {feedback.message}
-                        </Text>
-                        <TouchableOpacity className="bg-blue-600 px-8 py-3 rounded-xl" onPress={nextQuestion}>
-                            <Text className="text-white text-xl font-bold">Next Question</Text>
+                        <TouchableOpacity
+                            className="bg-rose-600 p-5 rounded-xl mb-6 shadow-lg shadow-rose-900/50 w-full"
+                            onPress={() => startGame('written')}
+                        >
+                            <Text className="text-white text-2xl font-bold text-center">Written (Hard)</Text>
+                            <Text className="text-rose-100 text-center text-base italic mt-1">Type the word from definition</Text>
                         </TouchableOpacity>
                     </View>
-                )}
+                </View>
+            )}
 
-            </ScrollView>
-        );
-    }
+            {appState === 'finished' && (
+                <View className="flex-1 justify-center items-center p-6">
+                    <View className="w-full max-w-md items-center" style={{ marginTop: -80 }}>
+                        <Text className="text-white text-4xl font-bold mb-4 text-center">Quiz Complete!</Text>
+                        <Text className="text-gray-300 text-xl mb-8 text-center">
+                            You scored <Text className="text-green-400 font-bold">{score}</Text> out of <Text className="font-bold">{sessionTotal}</Text>
+                        </Text>
+                        <TouchableOpacity className="bg-blue-600 px-8 py-3 rounded-xl" onPress={() => {
+                            console.log("Back to Menu pressed");
+                            setAppState('menu');
+                            setGameMode(null);
+                        }}>
+                            <Text className="text-white text-xl font-bold">Back to Menu</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            )}
 
-    return <View className="flex-1 bg-gray-900" />;
+            {(appState === 'playing' || appState === 'feedback') && (
+                <ScrollView contentContainerStyle={{ flexGrow: 1 }} className="bg-gray-900 p-6">
+                    <View className="flex-row justify-between mb-8 mt-4">
+                        <Text className="text-gray-400">Score: {score}</Text>
+                        <TouchableOpacity onPress={() => {
+                            setAppState('menu');
+                            setGameMode(null);
+                            navigation.goBack();
+                        }}>
+                            <Text className="text-red-400">Exit</Text>
+                        </TouchableOpacity>
+                    </View>
+
+                    {/* Display Question Prompt */}
+                    <View className="mb-8">
+                        <Text className="text-gray-400 text-lg mb-2 text-center">
+                            {gameMode === 'mc_word' ? 'What is the definition of:' : 'What word matches this definition?'}
+                        </Text>
+                        <Text className="text-white text-3xl font-bold text-center p-4 bg-gray-800 rounded-xl">
+                            {gameMode === 'mc_word' ? currentQuestion.target.word : currentQuestion.target.definition}
+                        </Text>
+                    </View>
+
+                    {/* Input Area */}
+                    {gameMode === 'written' ? (
+                        <View>
+                            <TextInput
+                                className="bg-gray-800 text-white p-4 rounded-xl mb-6 text-xl border border-gray-700 text-center"
+                                placeholder="Type the word..."
+                                placeholderTextColor="#6b7280"
+                                value={textInput}
+                                onChangeText={setTextInput}
+                                editable={appState === 'playing'}
+                                autoCapitalize="none"
+                            />
+                            {appState === 'playing' && (
+                                <TouchableOpacity className="bg-blue-600 p-4 rounded-xl" onPress={() => checkAnswer(textInput)}>
+                                    <Text className="text-white text-xl font-bold text-center">Submit</Text>
+                                </TouchableOpacity>
+                            )}
+                        </View>
+                    ) : (
+                        <View>
+                            {currentQuestion.options.map((option, index) => (
+                                <TouchableOpacity
+                                    key={index}
+                                    disabled={appState !== 'playing'}
+                                    className={`p-4 rounded-xl mb-3 border ${appState === 'feedback'
+                                        ? (option.id === currentQuestion.target.id ? 'bg-green-600 border-green-600' : (option.id === selectedAnswer?.id ? 'bg-red-600 border-red-600' : 'bg-gray-800 border-gray-700'))
+                                        : 'bg-gray-800 border-gray-700 active:bg-blue-900'
+                                        }`}
+                                    onPress={() => checkAnswer(option)}
+                                >
+                                    <Text className="text-white text-lg">
+                                        {gameMode === 'mc_word' ? option.definition : option.word}
+                                    </Text>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+                    )}
+
+                    {/* Feedback Area */}
+                    {appState === 'feedback' && (
+                        <View className="mt-8 items-center">
+                            <Text className={`text-2xl font-bold mb-4 ${feedback.correct ? 'text-green-400' : 'text-red-400'}`}>
+                                {feedback.message}
+                            </Text>
+                            <TouchableOpacity className="bg-blue-600 px-8 py-3 rounded-xl" onPress={nextQuestion}>
+                                <Text className="text-white text-xl font-bold">Next Question</Text>
+                            </TouchableOpacity>
+                        </View>
+                    )}
+                </ScrollView>
+            )}
+        </View>
+    );
 }

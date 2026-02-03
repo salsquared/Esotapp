@@ -1,5 +1,5 @@
-import './global.css';
 import 'react-native-gesture-handler';
+import './global.css';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import Home from './screens/Home';
@@ -10,6 +10,7 @@ import Quiz from './screens/Quiz';
 
 const Stack = createStackNavigator();
 
+// Force refresh
 export default function App() {
   return (
     <SafeAreaProvider>

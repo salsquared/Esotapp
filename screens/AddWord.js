@@ -2,9 +2,8 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Alert, KeyboardAvoidingView, Platform, ActivityIndicator, ScrollView, Modal, FlatList } from 'react-native';
 import { LANGUAGES } from '../utils/languages';
 
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
-import CustomModal from '../components/CustomModal';
+import { addWord } from '../utils/storage';
 import SuccessModal from '../components/SuccessModal';
 import ErrorModal from '../components/ErrorModal';
 import { fetchWordDefinition } from '../utils/dictionarySource';
@@ -115,22 +114,16 @@ export default function AddWord({ navigation }) {
                 dateAdded: new Date().toISOString(),
             };
 
-            const existingData = await AsyncStorage.getItem('vocabList');
-            const words = existingData ? JSON.parse(existingData) : [];
+            const result = await addWord(newEntry);
 
-            // Check for duplicates
-            const isDuplicate = words.some(existingItem =>
-                existingItem.word.toLowerCase() === formattedWord.toLowerCase() &&
-                existingItem.definition === definition.trim()
-            );
-
-            if (isDuplicate) {
+            if (result.error === 'duplicate') {
                 setShowDuplicateModal(true);
                 return;
             }
 
-            const updatedWords = [newEntry, ...words];
-            await AsyncStorage.setItem('vocabList', JSON.stringify(updatedWords));
+            if (!result.success) {
+                throw new Error("Failed to save");
+            }
 
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             setShowSuccessModal(true);

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useLayoutEffect } from 'react';
 import { View, Text, FlatList, TouchableOpacity, Alert, Modal, TextInput, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getWords, deleteWords, updateWord, saveWords } from '../utils/storage';
 import { useFocusEffect } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -79,8 +79,7 @@ export default function List({ navigation }) {
 
     const loadWords = async () => {
         try {
-            const jsonValue = await AsyncStorage.getItem('vocabList');
-            const savedWords = jsonValue != null ? JSON.parse(jsonValue) : [];
+            const savedWords = await getWords();
             setWords(savedWords);
         } catch (e) {
             console.error(e);
@@ -146,9 +145,8 @@ export default function List({ navigation }) {
                     text: "Delete",
                     style: "destructive",
                     onPress: async () => {
-                        const newWords = words.filter(item => !selectedIds.has(item.id));
+                        const newWords = await deleteWords(selectedIds);
                         setWords(newWords);
-                        await AsyncStorage.setItem('vocabList', JSON.stringify(newWords));
                         setIsEditing(false);
                         setSelectedIds(new Set());
                         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -170,14 +168,8 @@ export default function List({ navigation }) {
     const saveEdit = async () => {
         if (!editingItem || !editWordText.trim() || !editDefinitionText.trim()) return;
 
-        const updatedWords = words.map(w =>
-            w.id === editingItem.id
-                ? { ...w, word: editWordText.trim(), definition: editDefinitionText.trim(), partOfSpeech: editPartOfSpeech }
-                : w
-        );
-
-        setWords(updatedWords);
-        await AsyncStorage.setItem('vocabList', JSON.stringify(updatedWords));
+        const newWords = await updateWord({ ...editingItem, word: editWordText.trim(), definition: editDefinitionText.trim(), partOfSpeech: editPartOfSpeech });
+        setWords(newWords);
         setEditModalVisible(false);
         setEditingItem(null);
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -306,7 +298,7 @@ export default function List({ navigation }) {
             }));
 
             setWords(updatedWords);
-            await AsyncStorage.setItem('vocabList', JSON.stringify(updatedWords));
+            await saveWords(updatedWords);
             Alert.alert("Migration Complete", "Words formatted and POS tags updated.");
 
         } catch (error) {
