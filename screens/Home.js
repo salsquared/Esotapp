@@ -24,7 +24,7 @@ export default function Home({ navigation }) {
 
     return (
         <View className="flex-1 bg-gray-900 items-center justify-center p-6">
-            <Text className="text-4xl font-bold text-white mb-2">Esotapp</Text>
+            <Text className="text-4xl font-bold text-white mb-2">Argot</Text>
             <Text className="text-gray-400 mb-10">{wordCount} words collected</Text>
 
             <TouchableOpacity

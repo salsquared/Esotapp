@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "Esotapp",
-    "slug": "esotapp",
-    "version": "1.0.0",
+    "name": "Argot",
+    "slug": "argot",
+    "version": "0.0.1",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -13,11 +13,11 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "bundleIdentifier": "com.salsquared.esotapp",
+      "bundleIdentifier": "com.salsquared.argot",
       "supportsTablet": true
     },
     "android": {
-      "package": "com.salsquared.esotapp",
+      "package": "com.salsquared.argot",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"

@@ -1,6 +1,6 @@
-# Esotapp
+# Argot
 
-Esotapp is a premium, offline-first vocabulary learning application designed to help users expand their lexicon with style. Built with React Native and Expo, and styled with NativeWind, it offers a sleek, dark-mode-first experience.
+Argot is a premium, offline-first vocabulary learning application designed to help users expand their lexicon with style. Built with React Native and Expo, and styled with NativeWind, it offers a sleek, dark-mode-first experience.
 
 ## Features
 
@@ -75,7 +75,7 @@ To further enhance the dictionary, the following are being evaluated:
 
 1. **Clone the repository** (or navigate to the directory):
    ```bash
-   cd Esotapp
+   cd Argot
    ```
 
 2. **Install dependencies**:
