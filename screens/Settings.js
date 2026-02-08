@@ -26,7 +26,7 @@ export default function Settings() {
                 {/* Placeholder for future settings */}
                 <View className="bg-gray-100 dark:bg-gray-800 rounded-xl p-4 mb-4">
                     <Text className="text-lg font-bold text-gray-900 dark:text-white mb-2">About</Text>
-                    <Text className="text-gray-500 dark:text-gray-400">Argot v0.1.0</Text>
+                    <Text className="text-gray-500 dark:text-gray-400">Argot v0.1.1</Text>
                     <Text className="text-gray-500 dark:text-gray-400 mt-1">
                         An esoteric vocabulary application designed to help you learn and retain unique words.
                     </Text>
